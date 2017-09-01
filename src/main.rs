@@ -5,12 +5,10 @@ extern crate opengl_graphics;
 extern crate rand;
 
 use piston::event_loop::*;
-use opengl_graphics::glyph_cache::GlyphCache;
 use piston::window::WindowSettings;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
-use std::string;
 use graphics::types::Rectangle;
 use rand::Rng;
 
@@ -29,20 +27,19 @@ pub mod game_colors {
 
 #[derive(Debug,Clone)]
 struct Block{
-    posX : i32,
-    posY : i32,
+    pos_x : i32,
+    pos_y : i32,
 }
 
 struct SnakeGame{
     velocity: f64,
     game_over: bool,
     dimensions: [u32; 2],
-    snakeHeadPos: Block,
-    snakeBody: Vec<Block>,
+    snake_head: Block,
+    snake_body: Vec<Block>,
     direction: Direction,
-    updateTime: f64,
-    blockSize: f64,
-    isGrowing: bool,
+    update_time: f64,
+    is_growing: bool,
     fruit : Block,
 }
 
@@ -74,22 +71,21 @@ enum Direction{
 impl SnakeGame{
     fn new(width: u32, height: u32) -> Self{
              
-        let mut centerX = ((width as f64) * 0.5) as i32;
-        let mut centerY = ((height as f64) * 0.5) as i32;       
+        let centerX = ((width as f64) * 0.5) as i32;
+        let centerY = ((height as f64) * 0.5) as i32;       
 
         SnakeGame{
             velocity : 10.0,
             game_over: false,
             dimensions: [width, height],
-            snakeHeadPos: Block {posX: centerX, posY: centerY },
-            snakeBody: vec![Block {posX: centerX + 1, posY: centerY},
-                            Block {posX: centerX + 2, posY: centerY}],
+            snake_head: Block {pos_x: centerX, pos_y: centerY },
+            snake_body: vec![Block {pos_x: centerX + 1, pos_y: centerY},
+                            Block {pos_x: centerX + 2, pos_y: centerY}],
             direction: Direction::Left,
-            updateTime: 0.0,
-            blockSize: 0.0,
-            isGrowing: false,
-            fruit: Block{   posX: rand::thread_rng().gen_range(1, (width - 1) as i32), 
-                            posY: rand::thread_rng().gen_range(1, (height - 1)  as i32) },
+            update_time: 0.0,
+            is_growing: false,
+            fruit: Block{   pos_x: rand::thread_rng().gen_range(1, (width - 1) as i32), 
+                            pos_y: rand::thread_rng().gen_range(1, (height - 1)  as i32) },
         }
     }
 
@@ -98,26 +94,25 @@ impl SnakeGame{
     }
 
     fn change_pos_fruit(&mut self){
-        self.fruit.posX = rand::thread_rng().gen_range(1, (self.dimensions[0] - 1) as i32);
-        self.fruit.posY = rand::thread_rng().gen_range(1, (self.dimensions[1] - 1) as i32);
+        self.fruit.pos_x = rand::thread_rng().gen_range(1, (self.dimensions[0] - 1) as i32);
+        self.fruit.pos_y = rand::thread_rng().gen_range(1, (self.dimensions[1] - 1) as i32);
     }
-
 
     fn is_collision(&mut self) -> Collision{
         // is the snakehead colliding with itself?
-        for block in self.snakeBody.iter(){
-            if self.snakeHeadPos.posX == block.posX && self.snakeHeadPos.posY == block.posY{
+        for block in self.snake_body.iter(){
+            if self.snake_head.pos_x == block.pos_x && self.snake_head.pos_y == block.pos_y{
                 return Collision::With_Snake;
             }
         }
         // is the snakehead colliding with the border?
-        if self.snakeHeadPos.posX <= 0 || self.snakeHeadPos.posX >= self.dimensions[0] as i32
-        || self.snakeHeadPos.posY <= 0 || self.snakeHeadPos.posY >= self.dimensions[1] as i32{
+        if self.snake_head.pos_x <= 0 || self.snake_head.pos_x >= self.dimensions[0] as i32
+        || self.snake_head.pos_y <= 0 || self.snake_head.pos_y >= self.dimensions[1] as i32{
             return Collision::With_Border;
         }
 
         // is the snakehead colliding with the fruit?
-        if self.snakeHeadPos.posX == self.fruit.posX && self.snakeHeadPos.posY == self.fruit.posY{
+        if self.snake_head.pos_x == self.fruit.pos_x && self.snake_head.pos_y == self.fruit.pos_y{
             return Collision::With_Fruit(self.fruit.clone());
         }
         Collision::No_Collision
@@ -139,9 +134,9 @@ impl SnakeGame{
                 }
             }
         
-        self.updateTime += upd.dt;
+        self.update_time += upd.dt;
         
-        if self.updateTime >= (1.0 / self.velocity){
+        if self.update_time >= (1.0 / self.velocity){
             let (x,y) = match self.direction{
                 Direction::Up =>    (0,-1),
                 Direction::Down =>  (0,1),
@@ -150,31 +145,31 @@ impl SnakeGame{
             };
 
             let mut blocks = Vec::new();
-            let mut oldblock = self.snakeHeadPos.clone();
+            let mut oldblock = self.snake_head.clone();
             
             // Update position of snake head
-            self.snakeHeadPos.posX = self.snakeHeadPos.posX + x;
-            self.snakeHeadPos.posY = self.snakeHeadPos.posY + y;
+            self.snake_head.pos_x = self.snake_head.pos_x + x;
+            self.snake_head.pos_y = self.snake_head.pos_y + y;
 
-            if (self.isGrowing){
-                let mut block = Block{posX : 0, posY: 0};
-                self.snakeBody.push(block); 
-                self.isGrowing = false;              
+            if (self.is_growing){
+                let mut block = Block{pos_x : 0, pos_y: 0};
+                self.snake_body.push(block); 
+                self.is_growing = false;              
             }
 
-            for block in self.snakeBody.iter_mut().rev(){
+            for block in self.snake_body.iter_mut().rev(){
                 blocks.push(oldblock);
                 oldblock = block.clone();
             }
 
             blocks.reverse();
-            self.snakeBody = blocks;
-            self.updateTime = 0.0;                        
+            self.snake_body = blocks;
+            self.update_time = 0.0;                        
         }
     }
 
     fn snake_grow(&mut self){
-        self.isGrowing = true;
+        self.is_growing = true;
     }
 
     fn snake_set_direction(&mut self, direction: Direction){
@@ -187,7 +182,7 @@ impl SnakeGame{
     }
 
     fn on_keypress(&mut self, key : Key){
-        let mut dir = match key {
+        let dir = match key {
             Key::Up => {
                 Direction::Up
             }
@@ -213,13 +208,13 @@ impl SnakeGame{
         self.snake_set_direction(dir);
     }
 
-    fn renderableRect(&self,posX : i32, posY : i32, args: &RenderArgs) -> Rectangle{
-        let blockSizeX = (args.width as f64) / (self.dimensions[0] as f64);
-        let blockSizeY = (args.height as f64) / (self.dimensions[1] as f64);
-        let snakePosX = (posX as f64) * blockSizeX;
-        let snakePosY = (posY as f64) * blockSizeY;
-        let rect = graphics::rectangle::rectangle_by_corners(snakePosX - blockSizeX * 0.5, snakePosY - blockSizeY * 0.5, 
-            snakePosX + blockSizeX * 0.5, snakePosY + blockSizeY * 0.5);
+    fn renderable_rect(&self,pos_x : i32, pos_y : i32, args: &RenderArgs) -> Rectangle{
+        let block_size_x = (args.width as f64) / (self.dimensions[0] as f64);
+        let block_size_y = (args.height as f64) / (self.dimensions[1] as f64);
+        let snake_pos_x = (pos_x as f64) * block_size_x;
+        let snake_pos_y = (pos_y as f64) * block_size_y;
+        let rect = graphics::rectangle::rectangle_by_corners(snake_pos_x - block_size_x * 0.5, snake_pos_y - block_size_y * 0.5, 
+            snake_pos_x + block_size_x * 0.5, snake_pos_y + block_size_y * 0.5);
         rect       
     }
 
@@ -233,14 +228,14 @@ impl SnakeGame{
             clear(game_colors::BLACK, gl);
 
             // draw snakes head
-            rectangle(game_colors::BLUE, self.renderableRect(self.snakeHeadPos.posX,self.snakeHeadPos.posY,args), c.transform, gl);
+            rectangle(game_colors::BLUE, self.renderable_rect(self.snake_head.pos_x,self.snake_head.pos_y,args), c.transform, gl);
 
             // draw fruit
-            rectangle(game_colors::RED, self.renderableRect(self.fruit.posX,self.fruit.posY,args), c.transform, gl);
+            rectangle(game_colors::RED, self.renderable_rect(self.fruit.pos_x,self.fruit.pos_y,args), c.transform, gl);
 
             // draw snakes body
-            for block in self.snakeBody.iter(){
-                rectangle(color::WHITE, self.renderableRect(block.posX,block.posY,args), c.transform, gl);  
+            for block in self.snake_body.iter(){
+                rectangle(color::WHITE, self.renderable_rect(block.pos_x,block.pos_y,args), c.transform, gl);  
             }
         });
     }

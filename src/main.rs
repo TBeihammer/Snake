@@ -117,39 +117,38 @@ impl SnakeGame{
         }
 
         // is the snakehead colliding with the fruit?
-        if self.snakeHeadPos.posX == self.fruit.posX && self.snakeHeadPos.posY >= self.fruit.posY{
+        if self.snakeHeadPos.posX == self.fruit.posX && self.snakeHeadPos.posY == self.fruit.posY{
             return Collision::With_Fruit(self.fruit.clone());
         }
         Collision::No_Collision
     }
     
     fn on_update(&mut self, upd: &UpdateArgs){      
+        
         match self.is_collision(){          
-            Collision::With_Fruit(fruit) => {
-                self.snake_grow();
-                self.change_pos_fruit();
+                Collision::With_Fruit(fruit) =>{
+                    self.snake_grow();
+                    self.change_pos_fruit();
+                }
+                Collision::No_Collision =>{
+                }         
+                _ =>{
+                    println!("Game over!");
+                    self.game_over = true;
+                    return;
+                }
             }
-            Collision::No_Collision =>{
-
-            }         
-            _ =>{
-
-                println!("Game over!");
-                self.game_over = true;
-                return;
-            }
-        }
-
-        let (x,y) = match self.direction{
-            Direction::Up =>    (0,-1),
-            Direction::Down =>  (0,1),
-            Direction::Right => (1,0),
-            Direction::Left =>  (-1,0),
-        };
-
+        
         self.updateTime += upd.dt;
-       
-        if self.updateTime >= (1.0 / self.velocity){           
+        
+        if self.updateTime >= (1.0 / self.velocity){
+            let (x,y) = match self.direction{
+                Direction::Up =>    (0,-1),
+                Direction::Down =>  (0,1),
+                Direction::Right => (1,0),
+                Direction::Left =>  (-1,0),
+            };
+
             let mut blocks = Vec::new();
             let mut oldblock = self.snakeHeadPos.clone();
             

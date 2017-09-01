@@ -14,7 +14,7 @@ use graphics::types::Rectangle;
 
 
 /// Contains colors that are used in the game
-pub mod color {
+pub mod game_colors {
     pub const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
     pub const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
     pub const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
@@ -26,6 +26,7 @@ pub mod color {
     pub const GREEN: [f32; 4 ] = [0.0,0.5,0.0,1.0];
 }
 
+#[derive(Debug,Clone)]
 struct Block{
     posX : i32,
     posY : i32,
@@ -40,6 +41,7 @@ struct SnakeGame{
     direction: Direction,
     updateTime: f64,
     blockSize: f64,
+    isGrowing: bool,
 }
 
 #[derive(Debug,Clone,PartialEq,Eq)]
@@ -74,7 +76,8 @@ impl SnakeGame{
                             Block {posX: centerX + 2, posY: centerY}],
             direction: Direction::Left,
             updateTime: 0.0,
-            blockSize: 0.0,    
+            blockSize: 0.0,
+            isGrowing: false,   
         }
     }
 
@@ -113,23 +116,33 @@ impl SnakeGame{
 
         self.updateTime += upd.dt;
        
-        if self.updateTime >= (1.0 / self.velocity){
-            
-         
+        if self.updateTime >= (1.0 / self.velocity){           
+            let mut blocks = Vec::new();
+            let mut oldblock = self.snakeHeadPos.clone();
             
             // Update position of snake head
             self.snakeHeadPos.posX = self.snakeHeadPos.posX + x;
             self.snakeHeadPos.posY = self.snakeHeadPos.posY + y;
-            self.updateTime = 0.0;
 
-            
+            if (self.isGrowing){
+                let mut block = Block{posX : 0, posY: 0};
+                self.snakeBody.push(block); 
+                self.isGrowing = false;              
+            }
+
+            for block in self.snakeBody.iter_mut().rev(){
+                blocks.push(oldblock);
+                oldblock = block.clone();
+            }
+
+            blocks.reverse();
+            self.snakeBody = blocks;
+            self.updateTime = 0.0;                        
         }
-     
-
     }
 
-    fn snake_grow(&mut self, count : u32){
-
+    fn snake_grow(&mut self){
+        self.isGrowing = true;
     }
 
     fn snake_set_direction(&mut self, direction: Direction){
@@ -188,10 +201,10 @@ impl SnakeGame{
         // draw viewport
         gl.draw(args.viewport(), |c, gl| {
             // clear the screen
-            clear(color::BLACK, gl);
+            clear(game_colors::BLACK, gl);
 
             // draw snakes head
-            rectangle(color::WHITE, self.renderableRect(self.snakeHeadPos.posX,self.snakeHeadPos.posY,args), c.transform, gl);
+            rectangle(game_colors::RED, self.renderableRect(self.snakeHeadPos.posX,self.snakeHeadPos.posY,args), c.transform, gl);
 
             // draw snakes body
             for block in self.snakeBody.iter(){

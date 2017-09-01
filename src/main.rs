@@ -2,6 +2,7 @@ extern crate piston;
 extern crate graphics;
 extern crate glutin_window;
 extern crate opengl_graphics;
+extern crate rand;
 
 use piston::event_loop::*;
 use opengl_graphics::glyph_cache::GlyphCache;
@@ -11,7 +12,7 @@ use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
 use std::string;
 use graphics::types::Rectangle;
-
+use rand::Rng;
 
 /// Contains colors that are used in the game
 pub mod game_colors {
@@ -42,7 +43,16 @@ struct SnakeGame{
     updateTime: f64,
     blockSize: f64,
     isGrowing: bool,
+    fruit : Block,
 }
+
+enum Collision{
+    With_Fruit(Block),
+    With_Snake,
+    With_Border,
+    No_Collision,
+}
+
 
 #[derive(Debug,Clone,PartialEq,Eq)]
 enum Direction{
@@ -66,7 +76,7 @@ impl SnakeGame{
              
         let mut centerX = ((width as f64) * 0.5) as i32;
         let mut centerY = ((height as f64) * 0.5) as i32;       
-        
+
         SnakeGame{
             velocity : 10.0,
             game_over: false,
@@ -77,7 +87,9 @@ impl SnakeGame{
             direction: Direction::Left,
             updateTime: 0.0,
             blockSize: 0.0,
-            isGrowing: false,   
+            isGrowing: false,
+            fruit: Block{   posX: rand::thread_rng().gen_range(0, width as i32), 
+                            posY: rand::thread_rng().gen_range(0, height as i32) },
         }
     }
 
@@ -85,26 +97,47 @@ impl SnakeGame{
         self.game_over
     }
 
-    fn is_collision(&mut self) -> bool{
+    fn change_pos_fruit(&mut self){
+        self.fruit.posX = rand::thread_rng().gen_range(0, self.dimensions[0] as i32);
+        self.fruit.posY = rand::thread_rng().gen_range(0, self.dimensions[1] as i32);
+    }
+
+
+    fn is_collision(&mut self) -> Collision{
         // is the snakehead colliding with itself?
         for block in self.snakeBody.iter(){
             if self.snakeHeadPos.posX == block.posX && self.snakeHeadPos.posY == block.posY{
-                return true;
+                return Collision::With_Snake;
             }
         }
         // is the snakehead colliding with the border?
         if self.snakeHeadPos.posX <= 0 || self.snakeHeadPos.posX >= self.dimensions[0] as i32
         || self.snakeHeadPos.posY <= 0 || self.snakeHeadPos.posY >= self.dimensions[1] as i32{
-            return true;
+            return Collision::With_Border;
         }
-        false
+
+        // is the snakehead colliding with the fruit?
+        if self.snakeHeadPos.posX == self.fruit.posX && self.snakeHeadPos.posY >= self.fruit.posY{
+            return Collision::With_Fruit(self.fruit.clone());
+        }
+        Collision::No_Collision
     }
     
     fn on_update(&mut self, upd: &UpdateArgs){      
-        if self.is_collision(){
-            println!("Game over!");
-            self.game_over = true;
-            return;
+        match self.is_collision(){          
+            Collision::With_Fruit(fruit) => {
+                self.snake_grow();
+                self.change_pos_fruit();
+            }
+            Collision::No_Collision =>{
+
+            }         
+            _ =>{
+
+                println!("Game over!");
+                self.game_over = true;
+                return;
+            }
         }
 
         let (x,y) = match self.direction{
@@ -150,9 +183,6 @@ impl SnakeGame{
         if opposite_direction(&direction) == self.direction {
             return;
         }
-
-        println!("Setting direction {:?}",direction);
-        println!("Opposite is {:?}", opposite_direction(&direction));
 
         self.direction = direction;
     }
@@ -204,7 +234,10 @@ impl SnakeGame{
             clear(game_colors::BLACK, gl);
 
             // draw snakes head
-            rectangle(game_colors::RED, self.renderableRect(self.snakeHeadPos.posX,self.snakeHeadPos.posY,args), c.transform, gl);
+            rectangle(game_colors::BLUE, self.renderableRect(self.snakeHeadPos.posX,self.snakeHeadPos.posY,args), c.transform, gl);
+
+            // draw fruit
+            rectangle(game_colors::RED, self.renderableRect(self.fruit.posX,self.fruit.posY,args), c.transform, gl);
 
             // draw snakes body
             for block in self.snakeBody.iter(){

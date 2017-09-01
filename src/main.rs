@@ -88,8 +88,8 @@ impl SnakeGame{
             updateTime: 0.0,
             blockSize: 0.0,
             isGrowing: false,
-            fruit: Block{   posX: rand::thread_rng().gen_range(0, width as i32), 
-                            posY: rand::thread_rng().gen_range(0, height as i32) },
+            fruit: Block{   posX: rand::thread_rng().gen_range(1, (width - 1) as i32), 
+                            posY: rand::thread_rng().gen_range(1, (height - 1)  as i32) },
         }
     }
 
@@ -98,8 +98,8 @@ impl SnakeGame{
     }
 
     fn change_pos_fruit(&mut self){
-        self.fruit.posX = rand::thread_rng().gen_range(0, self.dimensions[0] as i32);
-        self.fruit.posY = rand::thread_rng().gen_range(0, self.dimensions[1] as i32);
+        self.fruit.posX = rand::thread_rng().gen_range(1, (self.dimensions[0] - 1) as i32);
+        self.fruit.posY = rand::thread_rng().gen_range(1, (self.dimensions[1] - 1) as i32);
     }
 
 

@@ -73,8 +73,7 @@ fn opposite_direction(dir : &Direction) -> Direction{
 }
 
 impl SnakeGame{
-    fn new(width: u32, height: u32) -> Self{
-             
+    fn new(width: u32, height: u32) -> Self{           
         let center_x = ((width as f64) * 0.5) as i32;
         let center_y = ((height as f64) * 0.5) as i32;       
 
@@ -123,8 +122,7 @@ impl SnakeGame{
     }
     
     // The main update loop, process the propagated changes
-    fn on_update(&mut self, upd: &UpdateArgs){      
-        
+    fn on_update(&mut self, upd: &UpdateArgs){            
         // Look for collision
         match self.is_collision(){          
             Collision::WithFruit(fruit) =>{
@@ -248,7 +246,6 @@ impl SnakeGame{
     }
 
     fn on_game_render(&self, args: &RenderArgs, gl: &mut GlGraphics, glyph_cache: &mut GlyphCache){
-
         use graphics::*;
 
         // Only draw the "game over" screen
@@ -268,6 +265,30 @@ impl SnakeGame{
             // draw fruit
             rectangle(game_colors::RED, self.renderable_rect(self.fruit.pos_x,self.fruit.pos_y,args), c.transform, gl);
 
+            // draw borders
+            let lineWidth = (args.width as f64) / (self.dimensions[0] as f64) * 0.5;
+            let lineHeight = (args.height as f64) / (self.dimensions[1] as f64) * 0.5;
+            line(game_colors::WHITE,
+                 lineWidth,
+                 [0.0, 0.0, 0.0, args.height as f64],
+                 c.transform,
+                 gl);
+            line(game_colors::WHITE,
+                 lineWidth,
+                 [args.width as f64, 0.0, args.width as f64, args.height as f64],
+                 c.transform,
+                 gl);
+            line(game_colors::WHITE,
+                 lineHeight,
+                 [0.0, 0.0, args.width as f64, 0.0],
+                 c.transform,
+                 gl);
+            line(game_colors::WHITE,
+                 lineHeight,
+                 [0.0, args.height as f64, args.width as f64, args.height as f64],
+                 c.transform,
+                 gl);
+
             // draw snakes body
             for block in self.snake_body.iter(){
                 rectangle(color::WHITE, self.renderable_rect(block.pos_x,block.pos_y,args), c.transform, gl);
@@ -276,7 +297,6 @@ impl SnakeGame{
     }
 
     fn on_you_lost_window_render(&self, args: &RenderArgs, gl: &mut GlGraphics, glyph_cache: &mut GlyphCache){
-
         use graphics::*;
        
         // draw viewport
@@ -301,19 +321,16 @@ impl SnakeGame{
                     glyph_cache,
                     c.transform.trans(10.0, 20.0),
                     gl);
-
                 return;
             }            
         });
     }
-
 
     pub fn exec(&mut self,
                mut window: &mut Window,
                mut gl: &mut GlGraphics,
                mut e: &mut Events,
                mut glyph_cache: &mut GlyphCache){
-
         while let Some(e) = e.next(window) {                       
             if let Some(r) = e.update_args() {
                 self.on_update(&r);
@@ -331,7 +348,6 @@ impl SnakeGame{
     }
 }
 
-
 fn main() {
     // Change this to OpenGL::V2_1 if not working.
     let opengl = OpenGL::V3_2;
@@ -345,9 +361,7 @@ fn main() {
     events.set_ups(60);
 
     let mut gl = GlGraphics::new(opengl);
-
     let mut glyph_cache = GlyphCache::new("../../assets/Roboto-Regular.ttf").expect("Error unwraping fonts");
-
     let mut game = SnakeGame::new(30,30);
 
     game.exec(&mut window,&mut gl,&mut events,&mut glyph_cache);

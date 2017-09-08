@@ -1,7 +1,7 @@
 # Snake
 A simple game made with Rust using piston in order for me to get familiar with the [Rust programming language](https://www.rust-lang.org/en-US/install.html) and the Rust - Game engine [piston](https://github.com/PistonDevelopers/piston)
 
-![Image of game](assets/screenshot.png?raw=true "Image of Hit and Run")
+![Image of game](assets/screenshot.png?raw=true "Image of the Game")
 
 # Build and Run
 ## Requirements
@@ -9,10 +9,10 @@ Microsoft Visual C++ 2015 Runtime is required to run the game. This can be downl
 
 Compiled with rust 1.19.0. Get it here: https://www.rust-lang.org/en-US/install.html
 
-Hardware supporting OpenGL 3.2/2.1
+Hardware supporting OpenGL 3.2/2.1, else it might not work on some mobile graphic cards (Notebooks etc.)
 
 # Gameplay
-The classic snake - game. Get the fruit and avoid your tail and the borders. The snake also speeds up as you aquire more food.
+The classic snake - game. Get the fruit and avoid your tail and the border. The snake also speeds up as you aquire more food.
 Personal record: 69
 
 # Controls
@@ -31,3 +31,8 @@ Personal record: 69
 
 # Author
 * Thomas Beihammer - thomas.beihammer@gmail.com
+
+# Acknowledgments
+* Luis Hernandez Cruz's [hit_n_run](https://github.com/lhernandezcruz/hit_n_run) for giving me some insight into game programming with rust. 
+
+

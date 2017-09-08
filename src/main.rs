@@ -9,6 +9,7 @@ use piston::window::WindowSettings;
 use piston::input::*;
 use glutin_window::GlutinWindow as Window;
 use opengl_graphics::{GlGraphics, OpenGL};
+use opengl_graphics::glyph_cache::GlyphCache;
 use graphics::types::Rectangle;
 use rand::Rng;
 
@@ -31,9 +32,11 @@ struct Block{
     pos_y : i32,
 }
 
+#[derive(Clone)]
 struct SnakeGame{
     velocity: f64,
     game_over: bool,
+    restart: bool,
     dimensions: [u32; 2],
     snake_head: Block,
     snake_body: Vec<Block>,
@@ -41,13 +44,14 @@ struct SnakeGame{
     update_time: f64,
     is_growing: bool,
     fruit : Block,
+    score : u32,
 }
 
 enum Collision{
-    With_Fruit(Block),
-    With_Snake,
-    With_Border,
-    No_Collision,
+    WithFruit(Block),
+    WithSnake,
+    WithBorder,
+    NoCollision,
 }
 
 
@@ -59,81 +63,84 @@ enum Direction{
     Right
 }
 
-    fn opposite_direction(dir : &Direction) -> Direction {
-        match *dir {
-            Direction::Up => Direction::Down,
-            Direction::Down => Direction::Up,
-            Direction::Left => Direction::Right,
-            Direction::Right => Direction::Left,
-        }
+fn opposite_direction(dir : &Direction) -> Direction{
+    match *dir {
+        Direction::Up => Direction::Down,
+        Direction::Down => Direction::Up,
+        Direction::Left => Direction::Right,
+        Direction::Right => Direction::Left,
     }
+}
 
 impl SnakeGame{
     fn new(width: u32, height: u32) -> Self{
              
-        let centerX = ((width as f64) * 0.5) as i32;
-        let centerY = ((height as f64) * 0.5) as i32;       
+        let center_x = ((width as f64) * 0.5) as i32;
+        let center_y = ((height as f64) * 0.5) as i32;       
 
         SnakeGame{
             velocity : 10.0,
             game_over: false,
+            restart: false,
             dimensions: [width, height],
-            snake_head: Block {pos_x: centerX, pos_y: centerY },
-            snake_body: vec![Block {pos_x: centerX + 1, pos_y: centerY},
-                            Block {pos_x: centerX + 2, pos_y: centerY}],
+            snake_head: Block {pos_x: center_x, pos_y: center_y },
+            snake_body: vec![Block {pos_x: center_x + 1, pos_y: center_y},
+                            Block {pos_x: center_x + 2, pos_y: center_y}],
             direction: Direction::Left,
             update_time: 0.0,
             is_growing: false,
             fruit: Block{   pos_x: rand::thread_rng().gen_range(1, (width - 1) as i32), 
                             pos_y: rand::thread_rng().gen_range(1, (height - 1)  as i32) },
+
+            score: 0,
         }
     }
 
-    fn is_game_over(&mut self) -> bool{
-        self.game_over
-    }
-
     fn change_pos_fruit(&mut self){
+        // simply pick a random location, might also be on the snake
         self.fruit.pos_x = rand::thread_rng().gen_range(1, (self.dimensions[0] - 1) as i32);
         self.fruit.pos_y = rand::thread_rng().gen_range(1, (self.dimensions[1] - 1) as i32);
     }
 
     fn is_collision(&mut self) -> Collision{
-        // is the snakehead colliding with itself?
+        // is the snakehead colliding with the body?
         for block in self.snake_body.iter(){
             if self.snake_head.pos_x == block.pos_x && self.snake_head.pos_y == block.pos_y{
-                return Collision::With_Snake;
+                return Collision::WithSnake;
             }
         }
         // is the snakehead colliding with the border?
         if self.snake_head.pos_x <= 0 || self.snake_head.pos_x >= self.dimensions[0] as i32
         || self.snake_head.pos_y <= 0 || self.snake_head.pos_y >= self.dimensions[1] as i32{
-            return Collision::With_Border;
+            return Collision::WithBorder;
         }
 
         // is the snakehead colliding with the fruit?
         if self.snake_head.pos_x == self.fruit.pos_x && self.snake_head.pos_y == self.fruit.pos_y{
-            return Collision::With_Fruit(self.fruit.clone());
+            return Collision::WithFruit(self.fruit.clone());
         }
-        Collision::No_Collision
+        Collision::NoCollision
     }
     
+    // The main update loop, process the propagated changes
     fn on_update(&mut self, upd: &UpdateArgs){      
         
+        // Look for collision
         match self.is_collision(){          
-                Collision::With_Fruit(fruit) =>{
-                    self.snake_grow();
-                    self.change_pos_fruit();
-                }
-                Collision::No_Collision =>{
-                }         
-                _ =>{
-                    println!("Game over!");
-                    self.game_over = true;
-                    return;
-                }
+            Collision::WithFruit(fruit) =>{
+                self.snake_grow();
+                self.change_pos_fruit();
             }
+            Collision::NoCollision =>{
+
+            }
+            _ => {
+                // WithBorder / WithSnake
+                self.game_over = true;
+            }
+        }
         
+        // We update the game logic in fixed intervalls
         self.update_time += upd.dt;
         
         if self.update_time >= (1.0 / self.velocity){
@@ -144,6 +151,25 @@ impl SnakeGame{
                 Direction::Left =>  (-1,0),
             };
 
+            if self.restart{
+                let pristine = SnakeGame::new(self.dimensions[0],self.dimensions[1]);
+                self.game_over = pristine.game_over;
+                self.restart = pristine.restart;
+                self.direction = pristine.direction;
+                self.velocity = pristine.velocity;
+                self.snake_body = pristine.snake_body.clone();
+                self.snake_head = pristine.snake_head.clone();
+                self.update_time = pristine.update_time;
+                self.is_growing = pristine.is_growing;
+                self.fruit = pristine.fruit.clone();
+                self.score = pristine.score;
+                return;
+            }
+
+            if self.game_over{
+                return;
+            } 
+
             let mut blocks = Vec::new();
             let mut oldblock = self.snake_head.clone();
             
@@ -151,8 +177,8 @@ impl SnakeGame{
             self.snake_head.pos_x = self.snake_head.pos_x + x;
             self.snake_head.pos_y = self.snake_head.pos_y + y;
 
-            if (self.is_growing){
-                let mut block = Block{pos_x : 0, pos_y: 0};
+            if self.is_growing{
+                let block = Block{pos_x : 0, pos_y: 0};
                 self.snake_body.push(block); 
                 self.is_growing = false;              
             }
@@ -170,14 +196,13 @@ impl SnakeGame{
 
     fn snake_grow(&mut self){
         self.is_growing = true;
+        self.score += 1;
     }
 
-    fn snake_set_direction(&mut self, direction: Direction){
-        
+    fn snake_set_direction(&mut self, direction: Direction){     
         if opposite_direction(&direction) == self.direction {
             return;
         }
-
         self.direction = direction;
     }
 
@@ -195,8 +220,12 @@ impl SnakeGame{
             Key::Right => {
                 Direction::Right
             }
-            Key::X => {
-                println!("Game over!");
+            Key::Space => {
+                self.restart = true;
+                return;
+            }
+            Key::Escape => {
+                println!("Quit!");
                 self.game_over = true;
                 return;
             }
@@ -218,15 +247,21 @@ impl SnakeGame{
         rect       
     }
 
-    fn on_render(&self, args: &RenderArgs, gl: &mut GlGraphics){
+    fn on_game_render(&self, args: &RenderArgs, gl: &mut GlGraphics, glyph_cache: &mut GlyphCache){
 
         use graphics::*;
+
+        // Only draw the "game over" screen
+        if self.game_over{
+            self.on_you_lost_window_render(args,gl,glyph_cache);
+            return;
+        }
        
         // draw viewport
         gl.draw(args.viewport(), |c, gl| {
             // clear the screen
-            clear(game_colors::BLACK, gl);
-
+            clear(game_colors::BLACK, gl);      
+            
             // draw snakes head
             rectangle(game_colors::BLUE, self.renderable_rect(self.snake_head.pos_x,self.snake_head.pos_y,args), c.transform, gl);
 
@@ -235,21 +270,51 @@ impl SnakeGame{
 
             // draw snakes body
             for block in self.snake_body.iter(){
-                rectangle(color::WHITE, self.renderable_rect(block.pos_x,block.pos_y,args), c.transform, gl);  
+                rectangle(color::WHITE, self.renderable_rect(block.pos_x,block.pos_y,args), c.transform, gl);
             }
         });
     }
 
+    fn on_you_lost_window_render(&self, args: &RenderArgs, gl: &mut GlGraphics, glyph_cache: &mut GlyphCache){
+
+        use graphics::*;
+       
+        // draw viewport
+        gl.draw(args.viewport(), |c, gl| {
+            // clear the screen
+            clear(game_colors::BLACK, gl);
+
+            if self.game_over{
+                // display Game over and score
+                text(color::WHITE,
+                    10,
+                    format!("Game over! Press Space to restart, Escape to quit!")
+                        .as_str(),
+                    glyph_cache,
+                    c.transform.trans(10.0, 10.0),
+                    gl);
+
+                text(color::WHITE,
+                    10,
+                    format!("Your score is {}",self.score)
+                        .as_str(),
+                    glyph_cache,
+                    c.transform.trans(10.0, 20.0),
+                    gl);
+
+                return;
+            }            
+        });
+    }
+
+
     pub fn exec(&mut self,
                mut window: &mut Window,
                mut gl: &mut GlGraphics,
-               mut e: &mut Events){
+               mut e: &mut Events,
+               mut glyph_cache: &mut GlyphCache){
 
-        self.game_over = false;
-        while let Some(e) = e.next(window) {
-            if self.is_game_over(){
-                break;
-            }                            
+        while let Some(e) = e.next(window) {                       
             if let Some(r) = e.update_args() {
                 self.on_update(&r);
             }
@@ -260,7 +325,7 @@ impl SnakeGame{
                 }
             }
             if let Some(r) = e.render_args() {
-                self.on_render(&r,gl);
+                self.on_game_render(&r,gl,glyph_cache);
             }                
         }
     }
@@ -281,9 +346,11 @@ fn main() {
 
     let mut gl = GlGraphics::new(opengl);
 
+    let mut glyph_cache = GlyphCache::new("../../assets/Roboto-Regular.ttf").expect("Error unwraping fonts");
+
     let mut game = SnakeGame::new(30,30);
 
-    game.exec(&mut window,&mut gl,&mut events);
+    game.exec(&mut window,&mut gl,&mut events,&mut glyph_cache);
 }
 
 

@@ -13,7 +13,7 @@ use opengl_graphics::glyph_cache::GlyphCache;
 use graphics::types::Rectangle;
 use rand::Rng;
 
-/// Contains colors that are used in the game
+/// Contains colors that can be used in the game
 pub mod game_colors {
     pub const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
     pub const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
@@ -26,12 +26,15 @@ pub mod game_colors {
     pub const GREEN: [f32; 4 ] = [0.0,0.5,0.0,1.0];
 }
 
+// Most of the game is described by a block 
+// (The Fruit,the Snakehead, Snakebody ...)
 #[derive(Debug,Clone)]
 struct Block{
     pos_x : i32,
     pos_y : i32,
 }
 
+// The Game struct
 #[derive(Clone)]
 struct SnakeGame{
     velocity: f64,
@@ -47,6 +50,7 @@ struct SnakeGame{
     score : u32,
 }
 
+// We want to know which kind of collision occured
 enum Collision{
     WithFruit(Block),
     WithSnake,
@@ -63,6 +67,8 @@ enum Direction{
     Right
 }
 
+// In order to prohibit moving the snakehead back in the direction it came from
+// we check if the direction is allowed in the function snake_set_direction()
 fn opposite_direction(dir : &Direction) -> Direction{
     match *dir {
         Direction::Up => Direction::Down,
@@ -90,7 +96,6 @@ impl SnakeGame{
             is_growing: false,
             fruit: Block{   pos_x: rand::thread_rng().gen_range(1, (width - 1) as i32), 
                             pos_y: rand::thread_rng().gen_range(1, (height - 1)  as i32) },
-
             score: 0,
         }
     }
@@ -121,7 +126,7 @@ impl SnakeGame{
         Collision::NoCollision
     }
     
-    // The main update loop, process the propagated changes
+    // The games update loop, process the propagated changes
     fn on_update(&mut self, upd: &UpdateArgs){            
         // Look for collision
         match self.is_collision(){          
@@ -133,14 +138,15 @@ impl SnakeGame{
 
             }
             _ => {
-                // WithBorder / WithSnake
+                // Collision WithBorder / WithSnake
                 self.game_over = true;
             }
         }
         
-        // We update the game logic in fixed intervalls
+        // Accumulate time to next update
         self.update_time += upd.dt;
         
+        // We update the game logic in fixed intervalls
         if self.update_time >= (1.0 / self.velocity){
             let (x,y) = match self.direction{
                 Direction::Up =>    (0,-1),
@@ -167,26 +173,31 @@ impl SnakeGame{
             if self.game_over{
                 return;
             } 
-
-            let mut blocks = Vec::new();
+            
+            // Clone current headposition, will be part of the body 
             let mut oldblock = self.snake_head.clone();
             
             // Update position of snake head
             self.snake_head.pos_x = self.snake_head.pos_x + x;
             self.snake_head.pos_y = self.snake_head.pos_y + y;
 
+            // If growing flag is set, add a new block to the body
             if self.is_growing{
                 let block = Block{pos_x : 0, pos_y: 0};
                 self.snake_body.push(block); 
                 self.is_growing = false;              
             }
 
+            // "Move" the snake by pushing current blocks of snakebody to new vector
+            let mut blocks = Vec::new();
             for block in self.snake_body.iter_mut().rev(){
                 blocks.push(oldblock);
                 oldblock = block.clone();
             }
 
             blocks.reverse();
+
+            // Assign new body
             self.snake_body = blocks;
             self.update_time = 0.0;                        
         }
@@ -195,6 +206,7 @@ impl SnakeGame{
     fn snake_grow(&mut self){
         self.is_growing = true;
         self.score += 1;
+        self.velocity += 0.01;
     }
 
     fn snake_set_direction(&mut self, direction: Direction){     
@@ -231,7 +243,6 @@ impl SnakeGame{
                 return;
             }
         };
-
         self.snake_set_direction(dir);
     }
 
@@ -265,29 +276,29 @@ impl SnakeGame{
             // draw fruit
             rectangle(game_colors::RED, self.renderable_rect(self.fruit.pos_x,self.fruit.pos_y,args), c.transform, gl);
 
-            // draw borders
+            // draw borders of the game
             let lineWidth = (args.width as f64) / (self.dimensions[0] as f64) * 0.5;
             let lineHeight = (args.height as f64) / (self.dimensions[1] as f64) * 0.5;
             line(game_colors::WHITE,
-                 lineWidth,
-                 [0.0, 0.0, 0.0, args.height as f64],
-                 c.transform,
-                 gl);
+                lineWidth,
+                [0.0, 0.0, 0.0, args.height as f64],
+                c.transform,
+                gl);
             line(game_colors::WHITE,
-                 lineWidth,
-                 [args.width as f64, 0.0, args.width as f64, args.height as f64],
-                 c.transform,
-                 gl);
+                lineWidth,
+                [args.width as f64, 0.0, args.width as f64, args.height as f64],
+                c.transform,
+                gl);
             line(game_colors::WHITE,
-                 lineHeight,
-                 [0.0, 0.0, args.width as f64, 0.0],
-                 c.transform,
-                 gl);
+                lineHeight,
+                [0.0, 0.0, args.width as f64, 0.0],
+                c.transform,
+                gl);
             line(game_colors::WHITE,
-                 lineHeight,
-                 [0.0, args.height as f64, args.width as f64, args.height as f64],
-                 c.transform,
-                 gl);
+                lineHeight,
+                [0.0, args.height as f64, args.width as f64, args.height as f64],
+                c.transform,
+                gl);  
 
             // draw snakes body
             for block in self.snake_body.iter(){
@@ -361,7 +372,7 @@ fn main() {
     events.set_ups(60);
 
     let mut gl = GlGraphics::new(opengl);
-    let mut glyph_cache = GlyphCache::new("../../assets/Roboto-Regular.ttf").expect("Error unwraping fonts");
+    let mut glyph_cache = GlyphCache::new("../../assets/Roboto-Regular.ttf").expect("Error unwrapping fonts");
     let mut game = SnakeGame::new(30,30);
 
     game.exec(&mut window,&mut gl,&mut events,&mut glyph_cache);

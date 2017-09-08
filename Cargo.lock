@@ -1,5 +1,5 @@
 [root]
-name = "rust_game"
+name = "Snake"
 version = "0.1.0"
 dependencies = [
  "piston 0.31.4 (registry+https://github.com/rust-lang/crates.io-index)",

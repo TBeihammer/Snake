@@ -1,5 +1,5 @@
 [package]
-name = "rust_game"
+name = "Snake"
 version = "0.1.0"
 authors = ["Thomas Beihammer"]
 

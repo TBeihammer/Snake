@@ -277,25 +277,25 @@ impl SnakeGame{
             rectangle(game_colors::RED, self.renderable_rect(self.fruit.pos_x,self.fruit.pos_y,args), c.transform, gl);
 
             // draw borders of the game
-            let lineWidth = (args.width as f64) / (self.dimensions[0] as f64) * 0.5;
-            let lineHeight = (args.height as f64) / (self.dimensions[1] as f64) * 0.5;
+            let line_width = (args.width as f64) / (self.dimensions[0] as f64) * 0.5;
+            let line_height = (args.height as f64) / (self.dimensions[1] as f64) * 0.5;
             line(game_colors::WHITE,
-                lineWidth,
+                line_width,
                 [0.0, 0.0, 0.0, args.height as f64],
                 c.transform,
                 gl);
             line(game_colors::WHITE,
-                lineWidth,
+                line_width,
                 [args.width as f64, 0.0, args.width as f64, args.height as f64],
                 c.transform,
                 gl);
             line(game_colors::WHITE,
-                lineHeight,
+                line_height,
                 [0.0, 0.0, args.width as f64, 0.0],
                 c.transform,
                 gl);
             line(game_colors::WHITE,
-                lineHeight,
+                line_height,
                 [0.0, args.height as f64, args.width as f64, args.height as f64],
                 c.transform,
                 gl);  
